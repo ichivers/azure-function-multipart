@@ -4,7 +4,6 @@ import { ParsedField } from "./types/parsed-field.type";
 import { ParsedFile } from "./types/parsed-file.type";
 import { ParsedMultipartFormData } from "./types/parsed-multipart-form-data.type";
 import { Config } from "./types/config.type";
-import { IncomingHttpHeaders } from "http";
 
 export default async function parseMultipartFormData(
   request: HttpRequest,
@@ -18,12 +17,16 @@ export default async function parseMultipartFormData(
       let busboy;
       if (options) {
         busboy = Busboy({
-          headers: (request.headers as unknown) as IncomingHttpHeaders,
+          headers: {
+            'content-type': request.headers.get('content-type') ?? undefined
+          },
           ...options,
         });
       } else {
         busboy = Busboy({
-          headers: (request.headers as unknown) as IncomingHttpHeaders,
+          headers: {
+            'content-type': request.headers.get('content-type') ?? undefined
+          }
         });
       }
 
@@ -81,7 +84,10 @@ export default async function parseMultipartFormData(
         });
       });
 
-      busboy.end(request.body);
+      request.body?.getReader().read().then((rawBody) => {
+        const body = Buffer.from(rawBody.value);
+        busboy.end(body);
+      });
     } catch (error) {
       reject(error);
     }
